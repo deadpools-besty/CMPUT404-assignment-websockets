@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 import flask
-from flask import Flask, request
+from flask import Flask, request, redirect
 from flask_sockets import Sockets
 import gevent
 from gevent import queue
@@ -63,17 +63,31 @@ myWorld = World()
 
 def set_listener( entity, data ):
     ''' do something with the update ! '''
+    myWorld.set(entity, data)
 
 myWorld.add_set_listener( set_listener )
         
 @app.route('/')
 def hello():
     '''Return something coherent here.. perhaps redirect to /static/index.html '''
-    return None
+    status_code = 302
+
+    return redirect('static/index.html', code=status_code)
 
 def read_ws(ws,client):
     '''A greenlet function that reads from the websocket and updates the world'''
     # XXX: TODO IMPLEMENT ME
+    try:
+        while True:
+            msg = ws.receive()
+            print("WS RECV: %s" % msg)
+            if (msg is not None):
+                newWorld = json.loads(msg)
+                
+            else:
+                break
+    except:
+        '''done'''
     return None
 
 @sockets.route('/subscribe')
@@ -81,6 +95,16 @@ def subscribe_socket(ws):
     '''Fufill the websocket URL of /subscribe, every update notify the
        websocket and read updates from the websocket '''
     # XXX: TODO IMPLEMENT ME
+    g = gevent.spawn( read_ws, ws, myWorld.world())
+    print("Subscribing")
+    try:
+        msg = json.dumps(myWorld.world())
+        print("Got world: %s" %msg)
+        ws.send(msg)
+    except Exception as e: 
+        print('WS Error %s' % e)
+    finally:
+        gevent.kill(g)
     return None
 
 
@@ -99,23 +123,31 @@ def flask_post_json():
 @app.route("/entity/<entity>", methods=['POST','PUT'])
 def update(entity):
     '''update the entities via this interface'''
-    return None
+    raw_data = flask_post_json()
+    myWorld.set(entity=entity, data=raw_data)
+    json_obj = json.dumps(myWorld.get(entity))
+    return json_obj, 200
 
 @app.route("/world", methods=['POST','GET'])    
 def world():
     '''you should probably return the world here'''
-    return None
+    json_obj = json.dumps(myWorld.world())
+    return json_obj, 200
 
 @app.route("/entity/<entity>")    
 def get_entity(entity):
     '''This is the GET version of the entity interface, return a representation of the entity'''
-    return None
+    json_obj = json.dumps(myWorld.get(entity))
+    return json_obj, 200
 
 
 @app.route("/clear", methods=['POST','GET'])
 def clear():
     '''Clear the world out!'''
-    return None
+
+    myWorld.clear()
+    json_obj = json.dumps(myWorld.world())
+    return json_obj, 200
 
 
 
