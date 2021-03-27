@@ -66,7 +66,8 @@ def set_listener( entity, data ):
     myWorld.set(entity, data)
 
 myWorld.add_set_listener( set_listener )
-        
+
+# most of this is from the code at https://github.com/uofa-cmput404/cmput404-slides/tree/master/examples/WebSocketsExamples
 @app.route('/')
 def hello():
     '''Return something coherent here.. perhaps redirect to /static/index.html '''
